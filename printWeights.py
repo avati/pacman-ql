@@ -1,3 +1,6 @@
+from game import Agent
+from game import Directions
+from pacman import GameState
 import argparse
 import pickle
 
@@ -8,6 +11,7 @@ def main(args):
 
   for key, value in w1.iteritems():
     print('{0} -> {1}'.format(key, value))
+
 
 if __name__ == '__main__':
   ap = argparse.ArgumentParser()
