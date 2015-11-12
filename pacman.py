@@ -246,7 +246,8 @@ class ClassicGameRules:
   def __init__(self, timeout=30):
     self.timeout = timeout
 
-  def newGame( self, layout, pacmanAgent, ghostAgents, display, quiet = False, catchExceptions=False):
+  def newGame( self, layout, pacmanAgent, ghostAgents, display,
+               quiet=False, catchExceptions=False):
     agents = [pacmanAgent] + ghostAgents[:layout.getNumGhosts()]
     initState = GameState()
     initState.initialize( layout, len(ghostAgents) )
@@ -264,11 +265,13 @@ class ClassicGameRules:
     if state.isLose(): self.lose(state, game)
 
   def win( self, state, game ):
-    if not self.quiet: print "Pacman emerges victorious! Score: %d" % state.data.score
+    if not self.quiet:
+      print "Pacman emerges victorious! Score: %d" % state.data.score
     game.gameOver = True
 
   def lose( self, state, game ):
-    if not self.quiet: print "Pacman died! Score: %d" % state.data.score
+    if not self.quiet:
+      print "Pacman died! Score: %d" % state.data.score
     game.gameOver = True
 
   def getProgress(self, game):
@@ -464,7 +467,7 @@ def readCommand( argv ):
   parser = OptionParser(usageStr)
 
   parser.add_option('-n', '--numGames', dest='numGames', type='int',
-                    help=default('the number of GAMES to play'), metavar='GAMES', default=1)
+                    help=default('the number of GAMES to play (<0 for infinity)'), metavar='GAMES', default=1)
   parser.add_option('-l', '--layout', dest='layout',
                     help=default('the LAYOUT_FILE from which to load the map layout'),
                     metavar='LAYOUT_FILE', default='mediumClassic')
@@ -612,11 +615,12 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining=0,
   # count down the remaining games, catch Cntl-C to end after next game
   exitNow = False
   remainingGames = numGames
-
-  while remainingGames > 0:
+  gameId = 0
+  while remainingGames > 0 or remainingGames < 0:
     try:
-      gameId = numGames - remainingGames
-      remainingGames -= 1
+      gameId += 1
+      if remainingGames > 0:
+        remainingGames -= 1
       beQuiet = gameId < numTraining
       if beQuiet:
           # Suppress output and graphics
@@ -627,8 +631,10 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining=0,
           gameDisplay = display
           rules.quiet = False
       game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
+      print('Game {0}:'.format(gameId))
       game.run()
-      if not beQuiet: games.append(game)
+      if not beQuiet:
+        games.append(game)
 
       if record:
         import time, cPickle
@@ -646,6 +652,9 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining=0,
         exitNow = True
         print('Exiting after next game')
         remainingGames = 0
+
+  if 'done' in dir(pacman):
+    pacman.done()
 
   if (numGames-numTraining) > 0:
     scores = [game.state.getScore() for game in games]

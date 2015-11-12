@@ -692,7 +692,3 @@ class Game:
           self._agentCrash(agent.index)
           return
     self.display.finish()
-
-
-
-
