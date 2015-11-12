@@ -494,7 +494,7 @@ def readCommand( argv ):
                     help=default('How many episodes are training (suppresses output)'), default=0)
   parser.add_option('--frameTime', dest='frameTime', type='float',
                     help=default('Time to delay between frames; <0 means keyboard'), default=0.1)
-  parser.add_option('-c', '--catchExceptions', action='store_true', dest='catchExceptions', 
+  parser.add_option('-c', '--catchExceptions', action='store_true', dest='catchExceptions',
                     help='Turns on exception handling and timeouts during games', default=False)
   parser.add_option('--timeout', dest='timeout', type='int',
                     help=default('Maximum length of time an agent can spend computing in a single game'), default=30)
@@ -601,34 +601,51 @@ def replayGame( layout, actions, display ):
 
     display.finish()
 
-def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30 ):
+def runGames( layout, pacman, ghosts, display, numGames, record, numTraining=0,
+              catchExceptions=False, timeout=30 ):
   import __main__
   __main__.__dict__['_display'] = display
 
   rules = ClassicGameRules(timeout)
   games = []
 
-  for i in range( numGames ):
-    beQuiet = i < numTraining
-    if beQuiet:
-        # Suppress output and graphics
-        import textDisplay
-        gameDisplay = textDisplay.NullGraphics()
-        rules.quiet = True
-    else:
-        gameDisplay = display
-        rules.quiet = False
-    game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
-    game.run()
-    if not beQuiet: games.append(game)
+  # count down the remaining games, catch Cntl-C to end after next game
+  exitNow = False
+  remainingGames = numGames
 
-    if record:
-      import time, cPickle
-      fname = ('recorded-game-%d' % (i + 1)) +  '-'.join([str(t) for t in time.localtime()[1:6]])
-      f = file(fname, 'w')
-      components = {'layout': layout, 'actions': game.moveHistory}
-      cPickle.dump(components, f)
-      f.close()
+  while remainingGames > 0:
+    try:
+      gameId = numGames - remainingGames
+      remainingGames -= 1
+      beQuiet = gameId < numTraining
+      if beQuiet:
+          # Suppress output and graphics
+          import textDisplay
+          gameDisplay = textDisplay.NullGraphics()
+          rules.quiet = True
+      else:
+          gameDisplay = display
+          rules.quiet = False
+      game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
+      game.run()
+      if not beQuiet: games.append(game)
+
+      if record:
+        import time, cPickle
+        fname = ('recorded-game-%d' % (gameId + 1)) +  '-'.join(
+          [str(t) for t in time.localtime()[1:6]])
+        f = file(fname, 'w')
+        components = {'layout': layout, 'actions': game.moveHistory}
+        cPickle.dump(components, f)
+        f.close()
+    except KeyboardInterrupt:
+      if exitNow:
+        print('Exiting now!')
+        os.exit(-1)
+      else:
+        exitNow = True
+        print('Exiting after next game')
+        remainingGames = 0
 
   if (numGames-numTraining) > 0:
     scores = [game.state.getScore() for game in games]
