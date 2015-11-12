@@ -65,7 +65,7 @@ other helper methods, though you don't need to.
 """
 
 def roteLearningFeatureExtractor(state, action):
-  return [((state, action), 1)]
+  return [(hash((state, action)), 1)]
 
 def lineOfSightFeatureExtractor(state, action):
   VERBOSE = False
