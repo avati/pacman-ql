@@ -32,7 +32,7 @@ from game import Actions
 from util import nearestPoint
 from util import manhattanDistance
 import util, layout
-import sys, types, time, random, os
+import sys, types, time, random, os, signal
 
 ###################################################
 # YOUR INTERFACE TO THE PACMAN WORLD: A GameState #
@@ -613,45 +613,48 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining=0,
   games = []
 
   # count down the remaining games, catch Cntl-C to end after next game
-  exitNow = False
-  remainingGames = numGames
-  gameId = 0
-  while remainingGames > 0 or remainingGames < 0:
-    try:
-      gameId += 1
-      if remainingGames > 0:
-        remainingGames -= 1
-      beQuiet = gameId < numTraining
-      if beQuiet:
-          # Suppress output and graphics
-          import textDisplay
-          gameDisplay = textDisplay.NullGraphics()
-          rules.quiet = True
-      else:
-          gameDisplay = display
-          rules.quiet = False
-      game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
-      print('Game {0}:'.format(gameId))
-      game.run()
-      if not beQuiet:
-        games.append(game)
+  exitNow = [False]
+  remainingGames = [numGames]
 
-      if record:
-        import time, cPickle
-        fname = ('recorded-game-%d' % (gameId + 1)) +  '-'.join(
-          [str(t) for t in time.localtime()[1:6]])
-        f = file(fname, 'w')
-        components = {'layout': layout, 'actions': game.moveHistory}
-        cPickle.dump(components, f)
-        f.close()
-    except KeyboardInterrupt:
-      if exitNow:
-        print('Exiting now!')
-        os.exit(-1)
-      else:
-        exitNow = True
-        print('Exiting after next game')
-        remainingGames = 0
+  def sigintHandler(signum, frame):
+    if exitNow[0]:
+      print('Exiting now!')
+      sys.exit(-1)
+    else:
+      exitNow[0] = True
+      print('Exiting after next game')
+      remainingGames[0] = 0
+  signal.signal(signal.SIGINT, sigintHandler)
+
+  gameId = 0
+  while remainingGames[0] > 0 or remainingGames[0] < 0:
+    gameId += 1
+    if remainingGames[0] > 0:
+      remainingGames[0] -= 1
+
+    beQuiet = gameId < numTraining
+    if beQuiet:
+        # Suppress output and graphics
+        import textDisplay
+        gameDisplay = textDisplay.NullGraphics()
+        rules.quiet = True
+    else:
+        gameDisplay = display
+        rules.quiet = False
+    game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
+    print('Game {0}:'.format(gameId))
+    game.run()
+    if not beQuiet:
+      games.append(game)
+
+    if record:
+      import time, cPickle
+      fname = ('recorded-game-%d' % (gameId + 1)) +  '-'.join(
+        [str(t) for t in time.localtime()[1:6]])
+      f = file(fname, 'w')
+      components = {'layout': layout, 'actions': game.moveHistory}
+      cPickle.dump(components, f)
+      f.close()
 
   if 'done' in dir(pacman):
     pacman.done()
