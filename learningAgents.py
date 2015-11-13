@@ -162,7 +162,7 @@ def lineOfSightFeatureExtractor(state, action):
 
 
 class QLearningAgent(Agent):
-  def __init__(self, db='weights', save='True', expProb='0.0',
+  def __init__(self, db='database', save='True', expProb='0.0',
                featureExt='rote'):
     # determine if we are going to save the weights at the end of the game
     if save.lower() in ['true', 'yes']:
@@ -239,13 +239,10 @@ class QLearningAgent(Agent):
     phi = dict(self.featureExtractor(state, action))
     q_opt = self.getQ(state, action)
 
-    scale = self.getStepSize()*(q_opt - (reward + self.discount*v_opt))
+    scale = self.getStepSize() * (q_opt - (reward + self.discount * v_opt))
 
     for k in phi.keys():
-      try:
-        self.weights[k] -= scale*phi[k]
-      except KeyError:
-        self.weights[k] = -scale*phi[k]
+      self.weights[k] -= scale * phi[k]
 
   def observationFunction(self, state):
     if not self.lastState is None:
@@ -255,7 +252,7 @@ class QLearningAgent(Agent):
 
   def load_weights(self):
     try:
-      self.weights = pickle.load(open(self.db, 'rb'))
+      self.weights = collections.Counter(pickle.load(open(self.db, 'rb')))
       print('Loaded {0} weights from {1}'.format(len(self.weights), self.db))
     except:
       print('Fresh training')
@@ -264,9 +261,8 @@ class QLearningAgent(Agent):
     print('Saving {0} weights to {1}'.format(len(self.weights), self.db))
     pickle.dump(self.weights, open(self.db, 'wb'))
 
-  #def final(self, state):
-  #  if self.save:
-  #    self.save_weights(state)
+  def final(self, state):
+    pass  # nothing to do on final state
 
   def done(self):
     if self.save:
