@@ -87,7 +87,7 @@ class GameState:
 
     # Time passes
     if agentIndex == 0:
-      state.data.scoreChange += -TIME_PENALTY # Penalty for waiting around
+      state.data.scoreChange += TIME_REWARD
     else:
       GhostRules.decrementTimer( state.data.agentStates[agentIndex] )
 
@@ -236,7 +236,11 @@ class GameState:
 
 SCARED_TIME = 40    # Moves ghosts are scared
 COLLISION_TOLERANCE = 0.7 # How close ghosts must be to Pacman to kill
-TIME_PENALTY = 1 # Number of points lost each round
+TIME_REWARD = -1 # Number of points lost each round
+FOOD_REWARD = 10
+EAT_GHOST_REWARD = 200
+WIN_REWARD = 500
+LOSE_REWARD = -500
 
 class ClassicGameRules:
   """
@@ -338,14 +342,14 @@ class PacmanRules:
     x,y = position
     # Eat food
     if state.data.food[x][y]:
-      state.data.scoreChange += 10
+      state.data.scoreChange += FOOD_REWARD
       state.data.food = state.data.food.copy()
       state.data.food[x][y] = False
       state.data._foodEaten = position
       # TODO: cache numFood?
       numFood = state.getNumFood()
       if numFood == 0 and not state.data._lose:
-        state.data.scoreChange += 500
+        state.data.scoreChange += WIN_REWARD
         state.data._win = True
     # Eat capsule
     if( position in state.getCapsules() ):
@@ -413,14 +417,14 @@ class GhostRules:
 
   def collide( state, ghostState, agentIndex):
     if ghostState.scaredTimer > 0:
-      state.data.scoreChange += 200
+      state.data.scoreChange += EAT_GHOST_REWARD
       GhostRules.placeGhost(state, ghostState)
       ghostState.scaredTimer = 0
       # Added for first-person
       state.data._eaten[agentIndex] = True
     else:
       if not state.data._win:
-        state.data.scoreChange -= 500
+        state.data.scoreChange += LOSE_REWARD
         state.data._lose = True
   collide = staticmethod( collide )
 
