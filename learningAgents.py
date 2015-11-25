@@ -224,7 +224,7 @@ class QLearningAgent(Agent):
 
   def actions(self, state):
     acts = state.getLegalActions()
-    acts.remove(Directions.STOP)
+    #acts.remove(Directions.STOP)
     return acts
 
   def getStepSize(self):
