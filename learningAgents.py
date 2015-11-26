@@ -64,17 +64,15 @@ The GameState class is defined in pacman.py and you might want to look into that
 other helper methods, though you don't need to.
 """
 
-def roteLearningFeatureExtractor(state, action):
-  return [(hash((state, action)), 1)]
+def roteLearningFeatureExtractor(state, action, features):
+  features[(hash(state), action)] += 1
 
-def lineOfSightFeatureExtractor(state, action):
+def lineOfSightFeatureExtractor(state, action, features):
   VERBOSE = False
   TIMER_THRES = 3
 
   pacman = state.getPacmanState()
   ghosts = state.getGhostStates()
-
-  features = collections.Counter()
 
   px = int(pacman.configuration.pos[0])
   py = int(pacman.configuration.pos[1])
@@ -99,9 +97,9 @@ def lineOfSightFeatureExtractor(state, action):
         # if L.O.S., add feature for malicious or scared ghost
         if los:
           if ghost.scaredTimer < TIMER_THRES:
-            features['mn_{0}'.format(gy - py)] += 1
+            features[('mn_{0}'.format(gy - py), action)] += 1
           else:
-            features['sn_{0}'.format(gy - py)] += 1
+            features[('sn_{0}'.format(gy - py), action)] += 1
 
       # test ghost is below pacman
       if py >= gy:
@@ -115,9 +113,9 @@ def lineOfSightFeatureExtractor(state, action):
         # if L.O.S., add feature for malicious or scared ghost
         if los:
           if ghost.scaredTimer < TIMER_THRES:
-            features['ms_{0}'.format(py - gy)] += 1
+            features[('ms_{0}'.format(py - gy), action)] += 1
           else:
-            features['ss_{0}'.format(py - gy)] += 1
+            features[('ss_{0}'.format(py - gy), action)] += 1
 
     # test ghost with common Y coordinate
     if py == gy:
@@ -135,9 +133,9 @@ def lineOfSightFeatureExtractor(state, action):
         # if L.O.S., add feature for malicious or scared ghost
         if los:
           if ghost.scaredTimer < TIMER_THRES:
-            features['me_{0}'.format(gx - px)] += 1
+            features[('me_{0}'.format(gx - px), action)] += 1
           else:
-            features['se_{0}'.format(gx - px)] += 1
+            features[('se_{0}'.format(gx - px), action)] += 1
 
       # test ghost is left of pacman
       if px >= gx:
@@ -152,18 +150,28 @@ def lineOfSightFeatureExtractor(state, action):
         # if L.O.S., add feature for malicious or scared ghost
         if los:
           if ghost.scaredTimer < TIMER_THRES:
-            features['mw_{0}'.format(px - gx)] += 1
+            features[('mw_{0}'.format(px - gx), action)] += 1
           else:
-            features['sw_{0}'.format(px - gx)] += 1
+            features[('sw_{0}'.format(px - gx), action)] += 1
 
-  features = [((key, action), value) for key, value in features.iteritems()]
-  if VERBOSE: print(features)
-  return features
+
+
+def makeFeatureExtractor(funcs):
+  """
+  This creates a feature extractor from a list of functions that are
+  sub-feature extractors.
+  """
+  def featureExtractor(state, action):
+    features = collections.Counter()
+    for func in funcs:
+      func(state, action, features)
+    return features
+  return featureExtractor
 
 
 class QLearningAgent(Agent):
   def __init__(self, db='database', save='True', expProb='0.0',
-               featureExt='rote'):
+               featureExts='rote'):
     # determine if we are going to save the weights at the end of the game
     if save.lower() in ['true', 'yes']:
       self.save = True
@@ -175,13 +183,16 @@ class QLearningAgent(Agent):
     # determine the exploration probability for this run
     self.explorationProb = float(expProb)
 
-    # get the feature extractor
-    if featureExt.lower() == 'rote':
-      self.featureExtractor = roteLearningFeatureExtractor
-    elif featureExt.lower() == 'los':
-      self.featureExtractor = lineOfSightFeatureExtractor
-    else:
-      raise Exception('unsupported feature extractor: {0}'.format(featureExt))
+    # get the feature extractors
+    funcs = []
+    for featureExt in featureExts.split(','):
+      if featureExt.lower() == 'rote':
+        funcs.append(roteLearningFeatureExtractor)
+      elif featureExt.lower() == 'los':
+        funcs.append(lineOfSightFeatureExtractor)
+      else:
+        raise Exception('unsupported feature extractor: {0}'.format(featureExt))
+    self.featureExtractor = makeFeatureExtractor(funcs)
 
     # set the database name
     self.db = db + '.db'
@@ -205,7 +216,7 @@ class QLearningAgent(Agent):
   # Return the Q function associated with the weights and features
   def getQ(self, state, action):
     score = 0
-    for f, v in self.featureExtractor(state, action):
+    for f, v in self.featureExtractor(state, action).iteritems():
       score += self.weights[f] * v
     return score
 
@@ -236,13 +247,12 @@ class QLearningAgent(Agent):
     else:
       v_opt = 0
 
-    phi = dict(self.featureExtractor(state, action))
     q_opt = self.getQ(state, action)
 
     scale = self.getStepSize() * (q_opt - (reward + self.discount * v_opt))
 
-    for k in phi.keys():
-      self.weights[k] -= scale * phi[k]
+    for f, v in self.featureExtractor(state, action).iteritems():
+      self.weights[f] -= scale * v
 
   def observationFunction(self, state):
     if not self.lastState is None:
