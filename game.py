@@ -31,19 +31,19 @@ class Agent:
     raiseNotDefined()
 
 class Directions:
-  NORTH = 'North'
-  SOUTH = 'South'
-  EAST = 'East'
-  WEST = 'West'
-  STOP = 'Stop'
+  NORTH = 'N' # 'North'
+  SOUTH = 'S' # 'South'
+  EAST = 'E' # 'East'
+  WEST = 'W' # 'West'
+  STOP = 'H' # 'Stop' or 'Halt'
 
-  LEFT =       {NORTH: WEST,
-                 SOUTH: EAST,
-                 EAST:  NORTH,
-                 WEST:  SOUTH,
-                 STOP:  STOP}
+  LEFT = {NORTH: WEST,
+          SOUTH: EAST,
+          EAST:  NORTH,
+          WEST:  SOUTH,
+          STOP:  STOP}
 
-  RIGHT =      dict([(y,x) for x, y in LEFT.items()])
+  RIGHT =  dict([(y,x) for x, y in LEFT.items()])
 
   REVERSE = {NORTH: SOUTH,
              SOUTH: NORTH,

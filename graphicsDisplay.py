@@ -272,11 +272,11 @@ class PacmanGraphics:
     width = 30 + 80 * math.sin(math.pi* pos)
 
     delta = width / 2
-    if (direction == 'West'):
+    if (direction == Directions.WEST):
       endpoints = (180+delta, 180-delta)
-    elif (direction == 'North'):
+    elif (direction == Directions.NORTH):
       endpoints = (90+delta, 90-delta)
-    elif (direction == 'South'):
+    elif (direction == Directions.SOUTH):
       endpoints = (270+delta, 270-delta)
     else:
       endpoints = (0+delta, 0-delta)
@@ -330,13 +330,13 @@ class PacmanGraphics:
 
     dx = 0
     dy = 0
-    if dir == 'North':
+    if dir == Directions.NORTH:
       dy = -0.2
-    if dir == 'South':
+    if dir == Directions.SOUTH:
       dy = 0.2
-    if dir == 'East':
+    if dir == Directions.EAST:
       dx = 0.2
-    if dir == 'West':
+    if dir == Directions.WEST:
       dx = -0.2
     leftEye = circle((screen_x+self.gridSize*GHOST_SIZE*(-0.3+dx/1.5), screen_y-self.gridSize*GHOST_SIZE*(0.3-dy/1.5)), self.gridSize*GHOST_SIZE*0.2, WHITE, WHITE)
     rightEye = circle((screen_x+self.gridSize*GHOST_SIZE*(0.3+dx/1.5), screen_y-self.gridSize*GHOST_SIZE*(0.3-dy/1.5)), self.gridSize*GHOST_SIZE*0.2, WHITE, WHITE)
@@ -355,13 +355,13 @@ class PacmanGraphics:
     (screen_x, screen_y) = (self.to_screen(pos) )
     dx = 0
     dy = 0
-    if dir == 'North':
+    if dir == Directions.NORTH:
       dy = -0.2
-    if dir == 'South':
+    if dir == Directions.SOUTH:
       dy = 0.2
-    if dir == 'East':
+    if dir == Directions.EAST:
       dx = 0.2
-    if dir == 'West':
+    if dir == Directions.WEST:
       dx = -0.2
     moveCircle(eyes[0],(screen_x+self.gridSize*GHOST_SIZE*(-0.3+dx/1.5), screen_y-self.gridSize*GHOST_SIZE*(0.3-dy/1.5)), self.gridSize*GHOST_SIZE*0.2)
     moveCircle(eyes[1],(screen_x+self.gridSize*GHOST_SIZE*(0.3+dx/1.5), screen_y-self.gridSize*GHOST_SIZE*(0.3-dy/1.5)), self.gridSize*GHOST_SIZE*0.2)
