@@ -67,94 +67,141 @@ other helper methods, though you don't need to.
 def roteLearningFeatureExtractor(state, action, features):
   features[(hash(state), action)] += 1
 
-def lineOfSightFeatureExtractor(state, action, features):
+def los_extractor_helper(features, state, action, scared, px, py, gx, gy):
+  DIST=2
   VERBOSE = False
-  TIMER_THRES = 3
+  if VERBOSE:
+    print('pacman is at [{0},{1}]'.format(px, py))
+    print('ghost is at [{0},{1}]'.format(gx, gy))
 
+  if scared:
+    pfx = "scared_los_"
+  else:
+    pfx = "los_"
+
+  # test ghost with common X coordinate
+  if px == gx:
+    if VERBOSE: print('same X')
+      # test ghost is above pacman
+    if gy in range(py, py + DIST + 1):
+      if VERBOSE: print('up')
+        # determine if L.O.S. exists
+      los = True
+      for y in range(py, gy):
+        if state.hasWall(px, y):
+          los = False
+          break
+      if (los):
+        features[(pfx + 'up', action)] = 1
+
+      # test ghost is below pacman
+    if gy in range(py - DIST, py + 1):
+      if VERBOSE: print('down')
+      # determine if L.O.S exists
+      los = True
+      for y in range(gy, py):
+        if state.hasWall(px, y):
+          los = False
+          break
+      if (los):
+        features[(pfx + 'down', action)] = 1
+
+  # test ghost with common Y coordinate
+  if py == gy:
+    if VERBOSE: print('same X')
+    # test ghost is right of pacman
+    if gx in range(px, px + DIST + 1):
+      if VERBOSE: print('right')
+      # determine if L.O.S. exists
+      los = True
+      for x in range(px, gx):
+        if state.hasWall(x, py):
+          los = False
+          break
+      if (los):
+        features[(pfx + 'right', action)] = 1
+
+    # test ghost is left of pacman
+    if gx in range(px - DIST, px + 1):
+      if VERBOSE: print('left')
+      # determine if L.O.S. exists
+      los = True
+      for x in range(gx, px):
+        if state.hasWall(x, py):
+          los = False
+          break
+      if (los):
+        features[(pfx + 'left', action)] = 1
+
+def lineOfSightFeatureExtractor(state, action, features):
+  SCARED_THRESH = 3
   pacman = state.getPacmanState()
   ghosts = state.getGhostStates()
 
   px = int(pacman.configuration.pos[0])
   py = int(pacman.configuration.pos[1])
-  if VERBOSE: print('pacman is at [{0},{1}]'.format(px, py))
   for ghost in ghosts:
     gx = int(ghost.configuration.pos[0])
     gy = int(ghost.configuration.pos[1])
-    if VERBOSE: print('ghost is at [{0},{1}]'.format(gx, gy))
 
-    # test ghost with common X coordinate
-    if px == gx:
-      if VERBOSE: print('same X')
-      # test ghost is above pacman
-      if py <= gy:
-        if VERBOSE: print('up')
-        # determine if L.O.S. exists
-        los = True
-        for y in range(py, gy):
-          if state.hasWall(px, y):
-            los = False
-            break
-        # if L.O.S., add feature for malicious or scared ghost
-        if los:
-          if ghost.scaredTimer < TIMER_THRES:
-            features[('mn_{0}'.format(gy - py), action)] += 1
-          else:
-            features[('sn_{0}'.format(gy - py), action)] += 1
+    los_extractor_helper(features, state, action, ghost.scaredTimer > SCARED_THRESH, px, py, gx, gy)
 
-      # test ghost is below pacman
-      if py >= gy:
-        if VERBOSE: print('down')
-        # determine if L.O.S exists
-        los = True
-        for y in range(gy, py):
-          if state.hasWall(px, y):
-            los = False
-            break
-        # if L.O.S., add feature for malicious or scared ghost
-        if los:
-          if ghost.scaredTimer < TIMER_THRES:
-            features[('ms_{0}'.format(py - gy), action)] += 1
-          else:
-            features[('ss_{0}'.format(py - gy), action)] += 1
+def neighboringGhostFeatureExtractor(state, action, features):
+  SCARED_THRESH=3
+  dist=2
+  pacman = state.getPacmanState()
+  ghosts = state.getGhostStates()
 
-    # test ghost with common Y coordinate
-    if py == gy:
-      if VERBOSE: print('same X')
-      # test ghost is right of pacman
-      if px <= gx:
-        if VERBOSE: print('right')
-        # determine if L.O.S. exists
-        los = True
-        for x in range(px, gx):
-          if state.hasWall(x, py):
-            los = False
-            break
+  px = int(pacman.configuration.pos[0])
+  py = int(pacman.configuration.pos[1])
+  for ghost in ghosts:
+    gx = int(ghost.configuration.pos[0])
+    gy = int(ghost.configuration.pos[1])
+    if ghost.scaredTimer > SCARED_THRESH:
+      pfx = 'scared_ghost_'
+    else:
+      pfx = 'ghost_'
 
-        # if L.O.S., add feature for malicious or scared ghost
-        if los:
-          if ghost.scaredTimer < TIMER_THRES:
-            features[('me_{0}'.format(gx - px), action)] += 1
-          else:
-            features[('se_{0}'.format(gx - px), action)] += 1
+    if gy in range(py, py + dist + 1) and abs(gx - px) <= (gy - py) and not state.hasWall(px, py + 1):
+      features[(pfx + 'up', action)] = 1
+    if gy in range(py - dist, py + 1) and abs(gx - px) <= (py - gy) and not state.hasWall(px, py - 1):
+      features[(pfx + 'down', action)] = 1
+    if gx in range(px, px + dist + 1) and abs(gy - py) <= (gx - px) and not state.hasWall(px + 1, py):
+      features[(pfx + 'right', action)] = 1
+    if gx in range(px - dist, px + 1) and abs(gy - py) <= (px - gx) and not state.hasWall(px - 1, py):
+      features[(pfx + 'left', action)] = 1
 
-      # test ghost is left of pacman
-      if px >= gx:
-        if VERBOSE: print('left')
-        # determine if L.O.S. exists
-        los = True
-        for x in range(gx, px):
-          if state.hasWall(x, py):
-            los = False
-            break
+def neighboringFoodFeatureExtractor(state, action, features):
+  pacman = state.getPacmanState()
+  currentFood = state.getFood()
 
-        # if L.O.S., add feature for malicious or scared ghost
-        if los:
-          if ghost.scaredTimer < TIMER_THRES:
-            features[('mw_{0}'.format(px - gx), action)] += 1
-          else:
-            features[('sw_{0}'.format(px - gx), action)] += 1
+  px = int(pacman.configuration.pos[0])
+  py = int(pacman.configuration.pos[1])
 
+  if currentFood[px][py+1] == True:
+    features[('food_up', action)] = 1
+  if currentFood[px][py-1] == True:
+    features[('food_down', action)] = 1
+  if currentFood[px+1][py] == True:
+    features[('food_right', action)] = 1
+  if currentFood[px-1][py] == True:
+    features[('food_left', action)] = 1
 
+def neighboringCapsulesFeatureExtractor(state, action, features):
+  pacman = state.getPacmanState()
+  currentCapsules = state.getCapsules()
+
+  px = int(pacman.configuration.pos[0])
+  py = int(pacman.configuration.pos[1])
+
+  if (px, py+1) in currentCapsules:
+    features[('capsule_up', action)] = 1
+  if (px, py-1) in currentCapsules:
+    features[('capsule_down', action)] = 1
+  if (px+1, py) in currentCapsules:
+    features[('capsule_right', action)] = 1
+  if (px-1, py) in currentCapsules:
+    features[('capsule_left', action)] = 1
 
 def makeFeatureExtractor(funcs):
   """
@@ -162,9 +209,15 @@ def makeFeatureExtractor(funcs):
   sub-feature extractors.
   """
   def featureExtractor(state, action):
+    quadraticFeatures = False
     features = collections.Counter()
     for func in funcs:
       func(state, action, features)
+    if quadraticFeatures:
+      keys = sorted(features)
+      for (i, left) in enumerate(keys):
+        for right in keys[i+1:]:
+          features[(left, right)] = features[left]*features[right]
     return features
   return featureExtractor
 
@@ -185,13 +238,14 @@ class QLearningAgent(Agent):
 
     # get the feature extractors
     funcs = []
-    for featureExt in featureExts.split(','):
-      if featureExt.lower() == 'rote':
-        funcs.append(roteLearningFeatureExtractor)
-      elif featureExt.lower() == 'los':
-        funcs.append(lineOfSightFeatureExtractor)
-      else:
-        raise Exception('unsupported feature extractor: {0}'.format(featureExt))
+    if featureExts.lower() == 'rote':
+      funcs = [roteLearningFeatureExtractor]
+    else:
+      funcs = [lineOfSightFeatureExtractor,
+               neighboringGhostFeatureExtractor,
+               neighboringFoodFeatureExtractor,
+               neighboringCapsulesFeatureExtractor]
+
     self.featureExtractor = makeFeatureExtractor(funcs)
 
     # set the database name
@@ -235,7 +289,7 @@ class QLearningAgent(Agent):
 
   def actions(self, state):
     acts = state.getLegalActions()
-    #acts.remove(Directions.STOP)
+    acts.remove(Directions.STOP)
     return acts
 
   def getStepSize(self):
@@ -253,6 +307,13 @@ class QLearningAgent(Agent):
 
     for f, v in self.featureExtractor(state, action).iteritems():
       self.weights[f] -= scale * v
+
+    #self.normalize_weights()
+
+
+  def normalize_weights(self):
+    s = sum(self.weights.values())
+    self.weights = collections.Counter(dict(map(lambda (k, v): (k, v/s), self.weights.iteritems())))
 
   def observationFunction(self, state):
     if not self.lastState is None:
@@ -272,8 +333,9 @@ class QLearningAgent(Agent):
     pickle.dump(self.weights, open(self.db, 'wb'))
 
   def final(self, state):
-    pass  # nothing to do on final state
+    self.incorporateFeedback(self.lastState, self.lastAction, state.data.scoreChange, None)
 
   def done(self):
     if self.save:
+      #self.normalize_weights()
       self.save_weights()

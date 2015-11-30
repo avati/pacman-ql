@@ -239,8 +239,8 @@ COLLISION_TOLERANCE = 0.7 # How close ghosts must be to Pacman to kill
 TIME_REWARD = -1 # Number of points lost each round
 FOOD_REWARD = 10
 EAT_GHOST_REWARD = 200
-WIN_REWARD = 500
-LOSE_REWARD = -500
+WIN_REWARD = 5000
+LOSE_REWARD = -5000
 
 class ClassicGameRules:
   """
