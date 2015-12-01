@@ -65,7 +65,9 @@ other helper methods, though you don't need to.
 """
 
 def roteLearningFeatureExtractor(state, action, features):
-  features[(hash(state), action)] += 1
+  stateCopy = state.deepCopy()
+  stateCopy.score = 0
+  features[(hash(stateCopy), action)] = 1
 
 def los_extractor_helper(features, state, action, scared, px, py, gx, gy):
   DIST=2
