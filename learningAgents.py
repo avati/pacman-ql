@@ -261,13 +261,14 @@ class QLearningAgent(Agent):
     self.discount = 1
     self.lastState = None
     self.lastAction = None
+    self.numIters = 0
 
     print('db={0} save={1} expProb={2}'.format(self.db, save, expProb))
 
   def registerInitialState(self, state):
     self.lastState = None
     self.lastAction = None
-    self.numIters = 0
+    #self.numIters = 0
 
   # Return the Q function associated with the weights and features
   def getQ(self, state, action):
@@ -286,8 +287,13 @@ class QLearningAgent(Agent):
     if random.random() < self.explorationProb:
       return random.choice(self.actions(state))
     else:
-      return max((self.getQ(state, action), action)
-                 for action in self.actions(state))[1]
+      qa = list((self.getQ(state, action), action)
+                for action in self.actions(state))
+      maxval = max(qa)[0]
+      maxacts = map(lambda (x, y): y, filter(lambda (x, y): x == maxval, qa))
+      if state.lastAction in maxacts:
+        return state.lastAction
+      return random.choice(maxacts)
 
   def actions(self, state):
     acts = state.getLegalActions()
@@ -318,21 +324,24 @@ class QLearningAgent(Agent):
     self.weights = collections.Counter(dict(map(lambda (k, v): (k, v/s), self.weights.iteritems())))
 
   def observationFunction(self, state):
+    state.lastAction = None
     if not self.lastState is None:
       reward = state.getScore() - self.lastState.getScore()
       self.incorporateFeedback(self.lastState, self.lastAction, reward, state)
+      state.lastAction = self.lastAction
     return state
 
   def load_weights(self):
     try:
-      self.weights = collections.Counter(pickle.load(open(self.db, 'rb')))
-      print('Loaded {0} weights from {1}'.format(len(self.weights), self.db))
+      (self.numIters, w) = pickle.load(open(self.db, 'rb'))
+      self.weights = collections.Counter(w)
+      print('Loaded {0} weights from {1}. numIters={2}'.format(len(self.weights), self.db, self.numIters))
     except:
       print('Fresh training')
 
   def save_weights(self):
     print('Saving {0} weights to {1}'.format(len(self.weights), self.db))
-    pickle.dump(self.weights, open(self.db, 'wb'))
+    pickle.dump((self.numIters, self.weights), open(self.db, 'wb'))
 
   def final(self, state):
     self.incorporateFeedback(self.lastState, self.lastAction, state.data.scoreChange, None)
