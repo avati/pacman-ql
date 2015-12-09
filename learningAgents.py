@@ -70,7 +70,7 @@ def roteLearningFeatureExtractor(state, action, features):
   features[(hash(stateCopy), action)] = 1
 
 def los_extractor_helper(features, state, action, scared, px, py, gx, gy):
-  DIST=2
+  DIST=10
   VERBOSE = False
   if VERBOSE:
     print('pacman is at [{0},{1}]'.format(px, py))
@@ -254,6 +254,7 @@ class QLearningAgent(Agent):
     self.db = db + '.db'
 
     # if weights are available, read them in
+    self.numIters = 0
     self.weights = collections.Counter()
     self.load_weights()
 
@@ -261,7 +262,6 @@ class QLearningAgent(Agent):
     self.discount = 1
     self.lastState = None
     self.lastAction = None
-    self.numIters = 0
 
     print('db={0} save={1} expProb={2}'.format(self.db, save, expProb))
 
@@ -293,6 +293,10 @@ class QLearningAgent(Agent):
       maxacts = map(lambda (x, y): y, filter(lambda (x, y): x == maxval, qa))
       if state.lastAction in maxacts:
         return state.lastAction
+      if state.lastAction != None:
+        opp = {'S': 'N', 'N': 'S', 'E': 'W', 'W': 'E'}[state.lastAction]
+        if opp in maxacts and len(maxacts) > 1:
+          maxacts.remove(opp)
       return random.choice(maxacts)
 
   def actions(self, state):
