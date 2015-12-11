@@ -64,10 +64,13 @@ The GameState class is defined in pacman.py and you might want to look into that
 other helper methods, though you don't need to.
 """
 
-def roteLearningFeatureExtractor(state, action, features):
+def stateHash(state):
   stateCopy = state.deepCopy()
   stateCopy.score = 0
-  features[(hash(stateCopy), action)] = 1
+  return hash(stateCopy)
+
+def roteLearningFeatureExtractor(state, action, features):
+  features[(stateHash(state), action)] = 1
 
 def los_extractor_helper(features, state, action, scared, px, py, gx, gy):
   DIST=10
@@ -262,7 +265,7 @@ def makeFeatureExtractor(funcs):
 
 class QLearningAgent(Agent):
   def __init__(self, db='database', save='True', expProb='0.0',
-               featureExts='rote'):
+               featureExts='rote', count='False'):
     # determine if we are going to save the weights at the end of the game
     if save.lower() in ['true', 'yes']:
       self.save = True
@@ -270,6 +273,14 @@ class QLearningAgent(Agent):
       self.save = False
     else:
       raise Exception('invalid save specifier {0}'.format(save))
+
+    # determine if we are going to count state/action pairs
+    if count.lower() in ['true', 'yes']:
+      self.count = True
+    elif count.lower() in ['false', 'no']:
+      self.count = False
+    else:
+      raise Exception('invalid count specifier {0}'.format(count))
 
     # determine the exploration probability for this run
     self.explorationProb = float(expProb)
@@ -294,14 +305,16 @@ class QLearningAgent(Agent):
     # if weights are available, read them in
     self.numIters = 0
     self.weights = collections.Counter()
-    self.load_weights()
+    self.counts = collections.Counter()
+    self.load_agent()
 
     # misc
     self.discount = 1
     self.lastState = None
     self.lastAction = None
 
-    print('db={0} save={1} expProb={2}'.format(self.db, save, expProb))
+    print('db={0} save={1} count={2} expProb={3}'.format(self.db, self.save,
+                                                         self.count, expProb))
 
   def registerInitialState(self, state):
     self.lastState = None
@@ -316,8 +329,14 @@ class QLearningAgent(Agent):
     return score
 
   def getAction(self, state):
+    newAction = self.doGetAction(state)
+
+    # increment the count for the chosen state/action
+    if self.count:
+      self.counts[(stateHash(state), newAction)] += 1
+
     self.lastState = state
-    self.lastAction = self.doGetAction(state)
+    self.lastAction = newAction
     return self.lastAction
 
   def doGetAction(self, state):
@@ -351,9 +370,7 @@ class QLearningAgent(Agent):
 
     for f, v in self.featureExtractor(state, action).iteritems():
       self.weights[f] -= scale * v
-
     #self.normalize_weights()
-
 
   def normalize_weights(self):
     s = sum(self.weights.values())
@@ -367,22 +384,26 @@ class QLearningAgent(Agent):
       state.lastAction = self.lastAction
     return state
 
-  def load_weights(self):
+  def load_agent(self):
     try:
-      (self.numIters, w) = pickle.load(open(self.db, 'rb'))
+      (self.numIters, w, c) = pickle.load(open(self.db, 'rb'))
       self.weights = collections.Counter(w)
-      print('Loaded {0} weights from {1}. numIters={2}'.format(len(self.weights), self.db, self.numIters))
+      self.counts = collections.Counter(c)
+      print('Loaded from {0}: {1} weights, {2} counts, numIters {3}'.format(
+        self.db, len(self.weights), len(self.counts), self.numIters))
     except:
       print('Fresh training')
 
-  def save_weights(self):
-    print('Saving {0} weights to {1}'.format(len(self.weights), self.db))
-    pickle.dump((self.numIters, self.weights), open(self.db, 'wb'))
+  def save_agent(self):
+    print('Saving to {0}, {1} weights, {2} counts, numIters {3}'.format(
+      self.db, len(self.weights), len(self.counts), self.numIters))
+    pickle.dump((self.numIters, self.weights, self.counts), open(self.db, 'wb'))
 
   def final(self, state):
-    self.incorporateFeedback(self.lastState, self.lastAction, state.data.scoreChange, None)
+    self.incorporateFeedback(self.lastState, self.lastAction,
+                             state.data.scoreChange, None)
 
   def done(self):
     if self.save:
       #self.normalize_weights()
-      self.save_weights()
+      self.save_agent()
