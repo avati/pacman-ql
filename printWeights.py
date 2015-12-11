@@ -7,10 +7,14 @@ import pickle
 
 def main(args):
   with open(args.db, 'rb') as fd:
-    w1 = pickle.load(fd)
+    (iters, weights, counts) = pickle.load(fd)
 
-  for key, value in w1.iteritems():
-    print('{0} -> {1}'.format(key, value))
+  rote = len(weights) == len(counts)
+
+  for key, value in weights.iteritems():
+    cnt = counts[key] if rote else ''
+    print('[{0}]{1} -> {2}'.format(cnt, key, value))
+  print('numIters = {0}'.format(iters))
 
 
 if __name__ == '__main__':
