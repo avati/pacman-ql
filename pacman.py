@@ -670,6 +670,7 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining=0,
     progress = [1.0-game.rules.getProgress(game) for game in games]
     print 'Average Score:', sum(scores) / float(len(scores))
     print 'Scores:       ', ', '.join([str(score) for score in scores])
+    print 'Average Progress:', sum(progress) / float(len(progress))
     print 'Progress:       ', ', '.join([str(p) for p in progress])
     print 'Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate)
     print 'Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins])
