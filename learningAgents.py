@@ -135,6 +135,38 @@ def los_extractor_helper(features, state, action, scared, px, py, gx, gy):
       if (los):
         features[(pfx + 'left', action)] = 1
 
+def nearestFoodFeatureExtractor(state, action, features):
+  pacman = state.getPacmanState()
+  currentFood = state.getFood()
+
+  px = int(pacman.configuration.pos[0])
+  py = int(pacman.configuration.pos[1])
+
+  def dist(x, y):
+    return abs(x-px) + abs(y-py)
+
+  lowDist = currentFood.width + currentFood.height
+  lowX = None
+  lowY = None
+
+  for x in range(currentFood.width):
+    for y in range(currentFood.height):
+      if currentFood[x][y] == False: continue
+      d = dist(x, y)
+      if d < lowDist:
+        lowDist = d
+        lowX = x
+        lowY = y
+
+  if lowX < px:
+    features[('nearest_food_left', action)] = 1
+  if lowX > px:
+    features[('nearest_food_right', action)] = 1
+  if lowY < py:
+    features[('nearest_food_down', action)] = 1
+  if lowY > py:
+    features[('nearest_food_up', action)] = 1
+
 def lineOfSightFeatureExtractor(state, action, features):
   SCARED_THRESH = 3
   pacman = state.getPacmanState()
@@ -147,6 +179,10 @@ def lineOfSightFeatureExtractor(state, action, features):
     gy = int(ghost.configuration.pos[1])
 
     los_extractor_helper(features, state, action, ghost.scaredTimer > SCARED_THRESH, px, py, gx, gy)
+
+def lastActionFeatureExtractor(state, action, features):
+  if state.lastAction != None:
+    features[('lastAction_' + state.lastAction, action)] = 1
 
 def neighboringGhostFeatureExtractor(state, action, features):
   SCARED_THRESH=3
@@ -246,7 +282,9 @@ class QLearningAgent(Agent):
       funcs = [lineOfSightFeatureExtractor,
                neighboringGhostFeatureExtractor,
                neighboringFoodFeatureExtractor,
-               neighboringCapsulesFeatureExtractor]
+               neighboringCapsulesFeatureExtractor,
+               lastActionFeatureExtractor,
+               nearestFoodFeatureExtractor]
 
     self.featureExtractor = makeFeatureExtractor(funcs)
 
@@ -291,12 +329,6 @@ class QLearningAgent(Agent):
                 for action in self.actions(state))
       maxval = max(qa)[0]
       maxacts = map(lambda (x, y): y, filter(lambda (x, y): x == maxval, qa))
-      if state.lastAction in maxacts:
-        return state.lastAction
-      if state.lastAction != None:
-        opp = {'S': 'N', 'N': 'S', 'E': 'W', 'W': 'E'}[state.lastAction]
-        if opp in maxacts and len(maxacts) > 1:
-          maxacts.remove(opp)
       return random.choice(maxacts)
 
   def actions(self, state):
